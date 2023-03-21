@@ -46,11 +46,10 @@ By default, the app uses the "base" Whisper ASR model and the key combination to
 python whisper-dictation.py -m large -k cmd_r+shift -l en
 ```
 
-The models are multilingual, and you can specify a two-letter language code (e.g., "no" for Norwegian) with the -l or --language option. Specifying the language can improve recognition accuracy, especially for smaller model sizes.
+The models are multilingual, and you can specify a two-letter language code (e.g., "no" for Norwegian) with the `-l` or `--language` option. Specifying the language can improve recognition accuracy, especially for smaller model sizes.
 
 ## Setting the App as a Startup Item
 To have the app run automatically when your computer starts, follow these steps:
-
 
  1. Open System Preferences.
  2. Go to Users & Groups.
