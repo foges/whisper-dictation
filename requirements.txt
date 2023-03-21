@@ -1,0 +1,6 @@
+openai
+pyaudio
+keyboard
+argparse
+rumps
+numpy
