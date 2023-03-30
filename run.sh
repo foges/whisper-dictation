@@ -1,4 +1,5 @@
 #!/bin/bash
-echo "$(dirname "$0")"
-source venv/bin/activate
-python whisper-dictation.py
+Directory=$(dirname $0)
+echo $Directory
+#source venv/bin/activate
+python $Directory/whisper-dictation.py
