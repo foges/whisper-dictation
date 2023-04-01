@@ -51,7 +51,12 @@ The models are multilingual, and you can specify a two-letter language code (e.g
 ## Setting the App as a Startup Item
 To have the app run automatically when your computer starts, follow these steps:
 
- 1. Open System Preferences.
- 2. Go to Users & Groups.
- 3. Click on your username, then select the Login Items tab.
- 4. Click the + button and add the `run.sh` script from the whisper-dictation folder.
+ 1. For MacOS Versions < 13 (Ventura):
+	1. Open System Preferences
+	2. Click on Users & Groups
+	3. Click on your username, then select the Login Items tab.
+ 2. For MacOS Versions >= 13 (Ventura):
+	1. Open System Preferences
+	2. Click on General
+	3. Click on Login Items
+ 4. Click the + button and add the Whisper Dictation.app from the whisper-dictation folder.
