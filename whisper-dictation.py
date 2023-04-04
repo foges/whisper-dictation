@@ -5,7 +5,7 @@ import pyaudio
 import numpy as np
 import rumps
 from pynput import keyboard
-from whisper import load_model
+from whisper import load_model, tokenizer, available_models
 import platform
 
 class SpeechTranscriber:
@@ -99,18 +99,16 @@ class StatusBarApp(rumps.App):
         self.languages = languages
         self.current_language = languages[0] if languages is not None else None
 
+        languages_menu_items = self.setup_menu_supported_languages(self.languages, self.current_language)
+        models_menu_items = self.setup_menu_available_models()
+
         menu = [
             'Start Recording',
             'Stop Recording',
-            None,
-        ]
+            {'Language': languages_menu_items}, 
+            {'Model': models_menu_items}
+            ]
 
-        if languages is not None:
-            for lang in languages:
-                callback = self.change_language if lang != self.current_language else None
-                menu.append(rumps.MenuItem(lang, callback=callback))
-            menu.append(None)
-            
         self.menu = menu
         self.menu['Stop Recording'].set_callback(None)
 
@@ -120,10 +118,48 @@ class StatusBarApp(rumps.App):
         self.timer = None
         self.elapsed_time = 0
 
-    def change_language(self, sender):
-        self.current_language = sender.title
-        for lang in self.languages:
-            self.menu[lang].set_callback(self.change_language if lang != self.current_language else None)
+    def setup_menu_supported_languages(app, languages=None, current_language=None):
+        menu_items = []
+        for key in tokenizer.LANGUAGES:
+            menu_item = rumps.MenuItem(tokenizer.LANGUAGES[key], callback=app.change_audio_lang)
+            menu_item.state = 1 if current_language == key else 0
+            insert_index = languages.index(key) if languages is not None and key in languages else len(menu_items)
+            menu_items.insert(insert_index, menu_item)
+        
+        mi_auto_detect = rumps.MenuItem("auto-detect", callback=app.change_audio_lang)
+        print(current_language)
+        mi_auto_detect.state = 1 if current_language is None else 0
+        menu_items.insert(0, mi_auto_detect)
+        
+        return menu_items
+    
+    def setup_menu_available_models(app):
+        menu_items = []
+        for key in available_models():
+            menu_item = rumps.MenuItem(key, callback=app.change_whisper_model)
+            menu_item.state = 1 if (key == model_name) else 0
+            menu_items.append(menu_item)
+            
+        return menu_items
+
+    def change_audio_lang(app, menu_item):
+        print("Changing transacription language...")
+        app.change_active_menu_item(app.menu.get("Language"), menu_item)
+        language = menu_item.title
+        recorder.transcriber.language = language
+        print("Transcription language changed to " + language)
+
+    def change_whisper_model(app, menu_item):
+        print("Loading "+ menu_item.title +" model...")
+        app.change_active_menu_item(app.menu.get("Model"), menu_item)
+        model_name = menu_item.title
+        load_model(model_name)
+        print(f"{model_name} model loaded")
+
+    def change_active_menu_item(app, menu, menu_item):
+        for mitem in menu.itervalues():
+            mitem.state = 0
+        menu_item.state = 1
 
     @rumps.clicked('Start Recording')
     def start_app(self, _):
