@@ -2,10 +2,10 @@
 Multilingual dictation app based on the powerful OpenAI Whisper ASR model(s) to provide accurate and efficient speech-to-text conversion in any application. The app runs in the background and is triggered through a keyboard shortcut. It is also entirely offline, so no data will be shared. It allows users to set up their own keyboard combinations and choose from different Whisper models, and languages.
 
 ## Prerequisites
-The PortAudio library is required for this app to work. You can install it on macOS using the following command:
+The PortAudio and llvm library is required for this app to work. You can install it on macOS using the following command:
 
 ```bash
-brew install portaudio
+brew install portaudio llvm
 ```
 
 ## Permissions
@@ -19,7 +19,14 @@ git clone https://github.com/foges/whisper-dictation.git
 cd whisper-dictation
 ```
 
-Create a virtual environment:
+If you use poetry:
+
+```shell
+poetry install
+poetry shell
+```
+
+Or, if you don't use poetry, first create a virtual environment:
 
 ```bash
 python3 -m venv venv
