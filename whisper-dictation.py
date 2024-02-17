@@ -176,6 +176,7 @@ def parse_args():
         'starts and stops dictation')
     parser.add_argument('-m', '--model_name', type=str,
                         choices=['tiny', 'tiny.en', 'base', 'base.en', 'small', 'small.en', 'medium', 'medium.en', 'large'],
+                        choices=['tiny', 'tiny.en', 'base', 'base.en', 'small', 'small.en', 'medium', 'medium.en', 'large', 'large-v1', 'large-v2', 'large-v3'],
                         default='base',
                         help='Specify the whisper ASR model to use. Options: tiny, base, small, medium, or large. '
                         'To see the  most up to date list of models along with model size, memory footprint, and estimated '
