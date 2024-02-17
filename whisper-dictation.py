@@ -119,11 +119,13 @@ class StatusBarApp(rumps.App):
         self.max_time = max_time
         self.timer = None
         self.elapsed_time = 0
+        self.update_title()
 
     def change_language(self, sender):
         self.current_language = sender.title
         for lang in self.languages:
             self.menu[lang].set_callback(self.change_language if lang != self.current_language else None)
+        self.update_title()
 
     @rumps.clicked('Start Recording')
     def start_app(self, _):
@@ -151,6 +153,7 @@ class StatusBarApp(rumps.App):
         print('Transcribing...')
         self.title = "⏯"
         self.started = False
+        self.update_title()
         self.menu['Stop Recording'].set_callback(None)
         self.menu['Start Recording'].set_callback(self.start_app)
         self.recorder.stop()
@@ -162,6 +165,10 @@ class StatusBarApp(rumps.App):
             minutes, seconds = divmod(self.elapsed_time, 60)
             self.title = f"({minutes:02d}:{seconds:02d}) 🔴"
             threading.Timer(1, self.update_title).start()
+        else:
+            self.title = "⏯"
+            if (len(self.languages) > 1):
+                self.title += f" [{self.current_language}]"
 
     def toggle(self):
         if self.started:
@@ -175,7 +182,6 @@ def parse_args():
         description='Dictation app using the OpenAI whisper ASR model. By default the keyboard shortcut cmd+option '
         'starts and stops dictation')
     parser.add_argument('-m', '--model_name', type=str,
-                        choices=['tiny', 'tiny.en', 'base', 'base.en', 'small', 'small.en', 'medium', 'medium.en', 'large'],
                         choices=['tiny', 'tiny.en', 'base', 'base.en', 'small', 'small.en', 'medium', 'medium.en', 'large', 'large-v1', 'large-v2', 'large-v3'],
                         default='base',
                         help='Specify the whisper ASR model to use. Options: tiny, base, small, medium, or large. '
