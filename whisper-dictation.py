@@ -12,9 +12,15 @@ class SpeechTranscriber:
     def __init__(self, model):
         self.model = model
         self.pykeyboard = keyboard.Controller()
+        self._transccribtion_events_listener = None
 
     def transcribe(self, audio_data, language=None):
+        if self._transccribtion_events_listener is not None:
+            self._transccribtion_events_listener.transcription_started()
         result = self.model.transcribe(audio_data, language=language)
+        print("Transcribed: "+result["text"])
+        if self._transccribtion_events_listener is not None:
+            self._transccribtion_events_listener.transcription_finished()
         is_first = True
         for element in result["text"]:
             if is_first and element == " ":
@@ -26,6 +32,9 @@ class SpeechTranscriber:
                 time.sleep(0.0025)
             except:
                 pass
+
+    def set_transcription_events_listener(self, listener):
+        self._transccribtion_events_listener = listener
 
 class Recorder:
     def __init__(self, transcriber):
@@ -62,6 +71,9 @@ class Recorder:
         audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
         audio_data_fp32 = audio_data.astype(np.float32) / 32768.0
         self.transcriber.transcribe(audio_data_fp32, language)
+
+    def set_transcription_events_listener(self, listener):
+        self.transcriber.set_transcription_events_listener(listener)
 
 
 class GlobalKeyListener:
@@ -114,11 +126,13 @@ class StatusBarApp(rumps.App):
         self.menu = menu
         self.menu['Stop Recording'].set_callback(None)
 
-        self.started = False
+        self.is_recording = False
+        self.is_transcribing = False
         self.recorder = recorder
         self.max_time = max_time
         self.timer = None
         self.elapsed_time = 0
+        self.recorder.set_transcription_events_listener(self)
         self.update_title()
 
     def change_language(self, sender):
@@ -127,10 +141,20 @@ class StatusBarApp(rumps.App):
             self.menu[lang].set_callback(self.change_language if lang != self.current_language else None)
         self.update_title()
 
+    def transcription_started(self):
+        self.is_transcribing = True
+        self.update_title()
+    
+    def transcription_finished(self):
+        self.is_transcribing = False
+        self.update_title()
+
     @rumps.clicked('Start Recording')
     def start_app(self, _):
+        if self.is_transcribing | self.is_recording:
+            return
         print('Listening...')
-        self.started = True
+        self.is_recording = True
         self.menu['Start Recording'].set_callback(None)
         self.menu['Stop Recording'].set_callback(self.stop_app)
         self.recorder.start(self.current_language)
@@ -144,34 +168,38 @@ class StatusBarApp(rumps.App):
 
     @rumps.clicked('Stop Recording')
     def stop_app(self, _):
-        if not self.started:
+        if not self.is_recording:
             return
         
         if self.timer is not None:
             self.timer.cancel()
 
         print('Transcribing...')
-        self.title = "⏯"
-        self.started = False
+        self.is_recording = False
         self.update_title()
         self.menu['Stop Recording'].set_callback(None)
         self.menu['Start Recording'].set_callback(self.start_app)
         self.recorder.stop()
         print('Done.\n')
-
+        
     def update_title(self):
-        if self.started:
+        if self.is_recording:
             self.elapsed_time = int(time.time() - self.start_time)
             minutes, seconds = divmod(self.elapsed_time, 60)
             self.title = f"({minutes:02d}:{seconds:02d}) 🔴"
             threading.Timer(1, self.update_title).start()
         else:
-            self.title = "⏯"
-            if (len(self.languages) > 1):
-                self.title += f" [{self.current_language}]"
+            if self.is_transcribing:
+                seconds = int(time.time() - self.start_time) % 3 + 1
+                self.title = f"{'.' * seconds}"
+                threading.Timer(1, self.update_title).start()
+            else:
+                self.title = "⏯"
+                if (len(self.languages) > 1 if self.languages is not None else False):
+                    self.title += f" [{self.current_language}]"
 
     def toggle(self):
-        if self.started:
+        if self.is_recording:
             self.stop_app(None)
         else:
             self.start_app(None)
