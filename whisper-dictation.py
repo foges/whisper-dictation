@@ -73,8 +73,8 @@ class GlobalKeyListener:
 
     def parse_key_combination(self, key_combination):
         key1_name, key2_name = key_combination.split('+')
-        key1 = getattr(keyboard.Key, key1_name)
-        key2 = getattr(keyboard.Key, key2_name)
+        key1 = getattr(keyboard.Key, key1_name, keyboard.KeyCode(char=key1_name))
+        key2 = getattr(keyboard.Key, key2_name, keyboard.KeyCode(char=key2_name))
         return key1, key2
 
     def on_key_press(self, key):
