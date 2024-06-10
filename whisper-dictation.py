@@ -72,8 +72,8 @@ class GlobalKeyListener:
 
     def parse_key_combination(self, key_combination):
         key1_name, key2_name = key_combination.split('+')
-        key1 = getattr(keyboard.Key, key1_name)
-        key2 = getattr(keyboard.Key, key2_name)
+        key1 = getattr(keyboard.Key, key1_name, keyboard.KeyCode(char=key1_name))
+        key2 = getattr(keyboard.Key, key2_name, keyboard.KeyCode(char=key2_name))
         return key1, key2
 
     def on_key_press(self, key):
@@ -91,6 +91,25 @@ class GlobalKeyListener:
         elif key == self.key2:
             self.key2_pressed = False
 
+class DoubleCommandKeyListener:
+    def __init__(self, app):
+        self.app = app
+        self.key = keyboard.Key.cmd_r
+        self.pressed = 0
+        self.last_press_time = 0
+
+    def on_key_press(self, key):
+        is_listening = self.app.started
+        if key == self.key:
+            current_time = time.time()
+            if not is_listening and current_time - self.last_press_time < 0.5:  # Double click to start listening
+                self.app.toggle()
+            elif is_listening:  # Single click to stop listening
+                self.app.toggle()
+            self.last_press_time = current_time
+
+    def on_key_release(self, key):
+        pass
 
 class StatusBarApp(rumps.App):
     def __init__(self, transcriber, recorder, languages=None, max_time=None):
@@ -208,6 +227,9 @@ def parse_args():
     parser.add_argument('-k', '--key_combination', type=str, default='cmd_l+alt' if platform.system() == 'Darwin' else 'ctrl+alt',
                         help='Specify the key combination to toggle the app. Example: cmd_l+alt for macOS '
                         'ctrl+alt for other platforms. Default: cmd_r+alt (macOS) or ctrl+alt (others).')
+    parser.add_argument('--k_double_cmd', action='store_true',
+                            help='If set, use double Right Command key press on macOS to toggle the app (double click to begin recording, single click to stop recording). '
+                                 'Ignores the --key_combination argument.')
     parser.add_argument('-l', '--language', type=str, default=None,
                         help='Specify the two-letter language code (e.g., "en" for English) to improve recognition accuracy. '
                         'This can be especially helpful for smaller model sizes.  To see the full list of supported languages, '
@@ -237,9 +259,11 @@ if __name__ == "__main__":
     
     transcriber = SpeechTranscriber(model)
     recorder = Recorder()
-    
-    app = StatusBarApp(transcriber, recorder, args.language, args.max_time)
-    key_listener = GlobalKeyListener(app, args.key_combination)
+    app = StatusBarApp(recorder, args.language, args.max_time)
+    if args.k_double_cmd:
+        key_listener = DoubleCommandKeyListener(app)
+    else:
+        key_listener = GlobalKeyListener(app, args.key_combination)
     listener = keyboard.Listener(on_press=key_listener.on_key_press, on_release=key_listener.on_key_release)
     listener.start()
 
