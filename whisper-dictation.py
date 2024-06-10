@@ -259,7 +259,7 @@ if __name__ == "__main__":
     
     transcriber = SpeechTranscriber(model)
     recorder = Recorder()
-    app = StatusBarApp(recorder, args.language, args.max_time)
+    app = StatusBarApp(transcriber, recorder, args.language, args.max_time)
     if args.k_double_cmd:
         key_listener = DoubleCommandKeyListener(app)
     else:
