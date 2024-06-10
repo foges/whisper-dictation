@@ -12,15 +12,10 @@ class SpeechTranscriber:
     def __init__(self, model):
         self.model = model
         self.pykeyboard = keyboard.Controller()
-        self._transccribtion_events_listener = None
 
     def transcribe(self, audio_data, language=None):
-        if self._transccribtion_events_listener is not None:
-            self._transccribtion_events_listener.transcription_started()
         result = self.model.transcribe(audio_data, language=language)
         print("Transcribed: "+result["text"])
-        if self._transccribtion_events_listener is not None:
-            self._transccribtion_events_listener.transcription_finished()
         is_first = True
         for element in result["text"]:
             if is_first and element == " ":
@@ -33,23 +28,18 @@ class SpeechTranscriber:
             except:
                 pass
 
-    def set_transcription_events_listener(self, listener):
-        self._transccribtion_events_listener = listener
-
 class Recorder:
-    def __init__(self, transcriber):
+    def __init__(self):
         self.recording = False
-        self.transcriber = transcriber
 
-    def start(self, language=None):
-        thread = threading.Thread(target=self._record_impl, args=(language,))
+    def start(self, recordCompletedCallback, language=None):
+        thread = threading.Thread(target=self._record_impl, args=(recordCompletedCallback, language,))
         thread.start()
 
     def stop(self):
         self.recording = False
 
-
-    def _record_impl(self, language):
+    def _record_impl(self, recordCompletedCallback, language):
         self.recording = True
         frames_per_buffer = 1024
         p = pyaudio.PyAudio()
@@ -70,10 +60,7 @@ class Recorder:
 
         audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
         audio_data_fp32 = audio_data.astype(np.float32) / 32768.0
-        self.transcriber.transcribe(audio_data_fp32, language)
-
-    def set_transcription_events_listener(self, listener):
-        self.transcriber.set_transcription_events_listener(listener)
+        recordCompletedCallback(audio_data_fp32, language)
 
 
 class GlobalKeyListener:
@@ -106,8 +93,9 @@ class GlobalKeyListener:
 
 
 class StatusBarApp(rumps.App):
-    def __init__(self, recorder, languages=None, max_time=None):
+    def __init__(self, transcriber, recorder, languages=None, max_time=None):
         super().__init__("whisper", "⏯")
+        self.transcriber = transcriber
         self.languages = languages
         self.current_language = languages[0] if languages is not None else None
 
@@ -126,13 +114,13 @@ class StatusBarApp(rumps.App):
         self.menu = menu
         self.menu['Stop Recording'].set_callback(None)
 
+        self.title = ""
         self.is_recording = False
         self.is_transcribing = False
         self.recorder = recorder
         self.max_time = max_time
         self.timer = None
         self.elapsed_time = 0
-        self.recorder.set_transcription_events_listener(self)
         self.update_title()
 
     def change_language(self, sender):
@@ -141,23 +129,22 @@ class StatusBarApp(rumps.App):
             self.menu[lang].set_callback(self.change_language if lang != self.current_language else None)
         self.update_title()
 
-    def transcription_started(self):
-        self.is_transcribing = True
-        self.update_title()
-    
-    def transcription_finished(self):
-        self.is_transcribing = False
-        self.update_title()
-
     @rumps.clicked('Start Recording')
     def start_app(self, _):
+        def _recordCompletedCallback(audio_data_fp32, language):
+            self.update_title()
+            self.transcriber.transcribe(audio_data_fp32, language)
+            self.is_transcribing = False
+            self.update_title()
+
         if self.is_transcribing | self.is_recording:
             return
         print('Listening...')
         self.is_recording = True
         self.menu['Start Recording'].set_callback(None)
         self.menu['Stop Recording'].set_callback(self.stop_app)
-        self.recorder.start(self.current_language)
+        self.is_transcribing = True
+        self.recorder.start(_recordCompletedCallback, self.current_language)
 
         if self.max_time is not None:
             self.timer = threading.Timer(self.max_time, lambda: self.stop_app(None))
@@ -249,9 +236,9 @@ if __name__ == "__main__":
     print(f"{model_name} model loaded")
     
     transcriber = SpeechTranscriber(model)
-    recorder = Recorder(transcriber)
+    recorder = Recorder()
     
-    app = StatusBarApp(recorder, args.language, args.max_time)
+    app = StatusBarApp(transcriber, recorder, args.language, args.max_time)
     key_listener = GlobalKeyListener(app, args.key_combination)
     listener = keyboard.Listener(on_press=key_listener.on_key_press, on_release=key_listener.on_key_release)
     listener.start()
