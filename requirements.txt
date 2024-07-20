@@ -5,4 +5,4 @@ pynput
 keyboard
 argparse
 rumps
-numpy
+numpy==1.24.6
