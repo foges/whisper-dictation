@@ -1,6 +1,6 @@
 # New Instructions to download, install, use, etc. MLX Whisper for transcription
 
-[Watch the video](https://odysee.com/$/embed/mlx-whisper-dictation:f?r=6SzRYkdzExUm7NQBXxRVzky9pqaaomPK)
+# [Watch the video](https://odysee.com/$/embed/mlx-whisper-dictation:f?r=6SzRYkdzExUm7NQBXxRVzky9pqaaomPK)
 
 ## Step 1: Install Homebrew
 1. Open your terminal and run:
