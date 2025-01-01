@@ -2,6 +2,8 @@
 
 ### [watch the video: mlx-whisper-dictation on Odysee](https://odysee.com/$/embed/mlx-whisper-dictation:f?r=6SzRYkdzExUm7NQBXxRVzky9pqaaomPK)
 
+### [watch the video: mlx-whisper-dictation on YouTube](https://youtu.be/O1NsoeECVAs?si=ftyFf4FbQsWIBoJl)
+
 
 ## Step 1: Install Homebrew
 1. Open your terminal and run:
