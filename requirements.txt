@@ -6,3 +6,4 @@ keyboard
 argparse
 rumps
 numpy
+mlx-whisper
