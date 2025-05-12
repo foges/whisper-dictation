@@ -1,8 +1,8 @@
-openai
-openai-whisper
+mlx-whisper
 pyaudio
 pynput
 keyboard
 argparse
 rumps
 numpy
+pyperclip

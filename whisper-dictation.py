@@ -5,27 +5,37 @@ import pyaudio
 import numpy as np
 import rumps
 from pynput import keyboard
-from whisper import load_model
 import platform
+from mlx_whisper.load_models import load_model
+import mlx_whisper
+import pyperclip
 
 class SpeechTranscriber:
-    def __init__(self, model):
-        self.model = model
+    def __init__(self):
         self.pykeyboard = keyboard.Controller()
 
     def transcribe(self, audio_data, language=None):
-        result = self.model.transcribe(audio_data, language=language)
-        is_first = True
-        for element in result["text"]:
-            if is_first and element == " ":
-                is_first = False
-                continue
-
-            try:
-                self.pykeyboard.type(element)
-                time.sleep(0.0025)
-            except:
-                pass
+        result = mlx_whisper.transcribe(
+            audio_data, language=language, 
+        )
+        new_text = result["text"].lstrip()  # type: ignore
+        
+        try:
+            saved_clipboard = pyperclip.paste()
+            pyperclip.copy(new_text)
+            time.sleep(0.05)
+            
+            with self.pykeyboard.pressed(keyboard.Key.cmd):
+                self.pykeyboard.press('v')
+                self.pykeyboard.release('v')
+            
+            time.sleep(0.05)
+            
+            pyperclip.copy(saved_clipboard)
+            
+        except Exception as e:
+            print(f"Clipboard operation failed: {e}. Falling back to typing.")
+            self.pykeyboard.type(new_text)
 
 class Recorder:
     def __init__(self, transcriber):
@@ -131,7 +141,7 @@ class StatusBarApp(rumps.App):
             menu.append(None)
             
         self.menu = menu
-        self.menu['Stop Recording'].set_callback(None)
+        self.menu['Stop Recording'].set_callback(None) # type: ignore
 
         self.started = False
         self.recorder = recorder
@@ -141,7 +151,7 @@ class StatusBarApp(rumps.App):
 
     def change_language(self, sender):
         self.current_language = sender.title
-        for lang in self.languages:
+        for lang in self.languages: # type: ignore
             self.menu[lang].set_callback(self.change_language if lang != self.current_language else None)
 
     @rumps.clicked('Start Recording')
@@ -191,17 +201,18 @@ class StatusBarApp(rumps.App):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Dictation app using the OpenAI whisper ASR model. By default the keyboard shortcut cmd+option '
-        'starts and stops dictation')
-    parser.add_argument('-m', '--model_name', type=str,
-                        choices=['tiny', 'tiny.en', 'base', 'base.en', 'small', 'small.en', 'medium', 'medium.en', 'large'],
-                        default='base',
-                        help='Specify the whisper ASR model to use. Options: tiny, base, small, medium, or large. '
-                        'To see the  most up to date list of models along with model size, memory footprint, and estimated '
-                        'transcription speed check out this [link](https://github.com/openai/whisper#available-models-and-languages). '
-                        'Note that the models ending in .en are trained only on English speech and will perform better on English '
-                        'language. Note that the small, medium, and large models may be slow to transcribe and are only recommended '
-                        'if you find the base model to be insufficient. Default: base.')
+        description="Dictation app using the MLX OpenAI Whisper model. By default the keyboard shortcut cmd+option "
+        "starts and stops dictation")
+    parser.add_argument(
+        "-m",
+        "--model_name",
+        type=str,
+        default="mlx-community/whisper-large-v3-turbo-q4",
+        help="""Specify the MLX Whisper model to use. Example: mlx-community/whisper-large-v3-turbo-q4.
+        To see the  most up to date list of models visit https://huggingface.co/collections/mlx-community/whisper-663256f9964fbb1177db93dc?utm_source=chatgpt.com. 
+        Note that the models ending in .en are trained only on English speech and will perform better on English 
+        language.""",
+    )
     parser.add_argument('-k', '--key_combination', type=str, default='cmd_l+alt' if platform.system() == 'Darwin' else 'ctrl+alt',
                         help='Specify the key combination to toggle the app. Example: cmd_l+alt for macOS '
                         'ctrl+alt for other platforms. Default: cmd_r+alt (macOS) or ctrl+alt (others).')
@@ -231,11 +242,17 @@ if __name__ == "__main__":
     args = parse_args()
 
     print("Loading model...")
-    model_name = args.model_name
+    model_name = args.model_name 
+    if model_name is None: 
+        if "en" in args.language:
+            model_name = "mlx-community/distil-whisper-medium.en"
+        else:
+            model_name = "mlx-community/whisper-large-v3-turbo-q4"
+
     model = load_model(model_name)
     print(f"{model_name} model loaded")
-    
-    transcriber = SpeechTranscriber(model)
+
+    transcriber = SpeechTranscriber()
     recorder = Recorder(transcriber)
     
     app = StatusBarApp(recorder, args.language, args.max_time)
@@ -246,6 +263,8 @@ if __name__ == "__main__":
     listener = keyboard.Listener(on_press=key_listener.on_key_press, on_release=key_listener.on_key_release)
     listener.start()
 
-    print("Running... ")
+    print("Running...")
     app.run()
+
+
 
